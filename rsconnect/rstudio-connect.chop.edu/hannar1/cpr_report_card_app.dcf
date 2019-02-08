@@ -1,0 +1,13 @@
+name: cpr_report_card_app
+title: CPR Report Card App
+username: hannar1
+account: hannar1
+server: rstudio-connect.chop.edu
+hostUrl: https://rstudio-connect.chop.edu/__api__
+appId: 403
+bundleId: 2522
+url: https://rstudio-connect.chop.edu/content/403/
+when: 1549661491.99543
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Zoll_File/IndividualCompressions2467-109.csv|Zoll_File/IndividualCompressions5246-40.csv|Zoll_File/IndividualCompressions5249-83.csv|Zoll_File/IndividualCompressions5449-15.csv
