@@ -41,15 +41,33 @@ ui <- fluidPage(
     fileInput('datafile', 'Choose CSV file',
               accept=c('text/csv', 'text/comma-separated-values,text/plain')),
     # Age input
-    numericInput(inputId = "ageinput", label = "Enter Patient Age", value = 0, min = 0, max = 17.9, step = NA)
+    numericInput(inputId = "ageinput", label = "Enter Patient Age", value = 0, min = 0, max = 17.9, step = NA),
+    width = 2
     
   ),
-  mainPanel(
-    # Shows first 10 rows of input data set in table form
-    tableOutput("filetable"),
-    tableOutput("AvgDepthRate"),
-    tableOutput("CCF"),
-    plotlyOutput("DepthPlot"),
-    plotlyOutput("RatePlot")
+  # mainPanel(
+  #   # Shows first 10 rows of input data set in table form
+  #   tableOutput("filetable"),
+  #   tableOutput("AvgDepthRate"),
+  #   tableOutput("CCF"),
+  #   plotOutput("DepthPlot"),
+  #   plotOutput("RatePlot")
+  # )
+  column(12,
+       "",
+       fluidRow(
+         column(3,
+                tableOutput("filetable")),
+         column(width = 3,
+                tableOutput("AvgDepthRate")),
+         column(width = 3,
+                tableOutput("CCF"))
+       ), fluidRow(
+         column(width = 12,
+                plotOutput("DepthPlot"))
+       ), fluidRow(
+         column(width = 12,
+                plotOutput("RatePlot"))
+       )
   )
 )

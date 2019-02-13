@@ -131,12 +131,12 @@ shinyServer(function(input, output) {
       targetDh + targetDl + targetDb + theme(axis.line = element_line(size = 1, colour = "black")) +
       theme(axis.line = element_line(arrow = arrow()))
     
-    ggplotly(Depth_Plot)
+    Depth_Plot
     
   })
   
   #Outputs the average depth and rate
-  output$DepthPlot <- renderPlotly({
+  output$DepthPlot <- renderPlot({
     if (input$datafile == 0) return(NULL)
     DepthPlot()
   })
@@ -159,12 +159,12 @@ shinyServer(function(input, output) {
       targetRh + targetRl + targetRb + theme(axis.line = element_line(size = 1, colour = "black")) +
       theme(axis.line = element_line(arrow = arrow()))
     
-    ggplotly(Rate_Plot)
+    Rate_Plot
     
   })
   
   #Outputs the average depth and rate
-  output$RatePlot <- renderPlotly({
+  output$RatePlot <- renderPlot({
     if (input$datafile == 0) return(NULL)
     RatePlot()
   })
