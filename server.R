@@ -69,7 +69,7 @@ shinyServer(function(input, output) {
     Zoll_CCF_Total <- sum(Zoll_CCF_Time_In)/(max(Zoll_Data$FixedTime) - 
                                                min(Zoll_Data$FixedTime))
     
-    Time_Out_CCs <- (max(Zoll_Data$FixedTime) - sum(Zoll_CCF_Time_In))/
+    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_CCF_Time_In))/
       (max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))
     
     Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid"))
@@ -169,5 +169,95 @@ shinyServer(function(input, output) {
     RatePlot()
   })
   
+  
+  output$downloadReport <- downloadHandler(
+    filename = function() {
+      paste('my-report', sep = '.', switch(
+        input$format, PDF = 'pdf', HTML = 'html', Word = 'docx'
+      ))
+    },
+    
+    content = function(file) {
+      src <- normalizePath('report.Rmd')
+      
+      # temporarily switch to the temp dir, in case you do not have write
+      # permission to the current working directory
+      owd <- setwd(tempdir())
+      on.exit(setwd(owd))
+      file.copy(src, 'report.Rmd', overwrite = TRUE)
+      
+      library(rmarkdown)
+      out <- render('report.Rmd', switch(
+        input$format,
+        PDF = pdf_document(), HTML = html_document(), Word = word_document()
+      ))
+      file.rename(out, file)
+    }
+  )
+
+  CCFPiePlot <- reactive({
+    Zoll_Data <- filedata()
+    
+    ##Same as CCF Code 
+    
+    for (i in 1:nrow(Zoll_Data)) {
+      Zoll_Data$Pause[i] <- ifelse(
+        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
+    }
+    
+    
+    Zoll_CCF_Time_In <- 0 # Initialize new variable to test time in compressions
+    
+    for(i in 1:nrow(Zoll_Data)) {
+      ifelse((Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) <1, 
+             Zoll_CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
+             Zoll_CCF_Time_In[i] <-  0)
+    }
+    
+    Zoll_CCF_Total <- sum(Zoll_CCF_Time_In)/(max(Zoll_Data$FixedTime) - 
+                                               min(Zoll_Data$FixedTime))
+    
+    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_CCF_Time_In))/
+      (max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))
+    
+    Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid"))
+    
+    Minute_Time <- max(Zoll_Data$FixedTime)/60
+    
+    CCFp <- round(100*Zoll_CCF_Total, digits = 2)
+    CCFo <- round(100*Time_Out_CCs, digits = 2)
+    
+    CCFPlotDF <- data.frame(c(CCFp, CCFo))
+    colnames(CCFPlotDF) <- "ColName"
+                            
+    
+    #Pie Plot Addition
+
+    blank_theme <- theme_minimal()+
+      theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.grid=element_blank(),
+        axis.ticks = element_blank(),
+        plot.title=element_text(size=14, face="bold")
+      )
+
+    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$ColName, fill= CCFPlotDF$ColName)) +
+      geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
+      blank_theme +
+      #scale_fill_manual(values = c("Percent in CCs" = "grey65", "Percent Out of CCs" = "salmon")) +
+      theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
+      labs(title = "CCF For Event") + theme(legend.position="none")
+    
+    CCF_Pie
+
+  })
+  
+  #Outputs the average depth and rate
+  output$CCFPiePlot <- renderPlot({
+    if (input$datafile == 0) return(NULL)
+    CCFPiePlot()
+  })
 
 })

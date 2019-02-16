@@ -42,6 +42,11 @@ ui <- fluidPage(
               accept=c('text/csv', 'text/comma-separated-values,text/plain')),
     # Age input
     numericInput(inputId = "ageinput", label = "Enter Patient Age", value = 0, min = 0, max = 17.9, step = NA),
+    #Input Buttons
+    radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'),
+                 inline = TRUE),
+    #Download Button
+    downloadButton('downloadReport'),
     width = 2
     
   ),
@@ -56,18 +61,19 @@ ui <- fluidPage(
   column(12,
        "",
        fluidRow(
-         column(3,
+         column(width = 3,
                 tableOutput("filetable")),
          column(width = 3,
                 tableOutput("AvgDepthRate")),
          column(width = 3,
-                tableOutput("CCF"))
-       ), fluidRow(
+                tableOutput("CCF")),
+         column(width = 3,
+                plotOutput("CCFPiePlot"))
+       )), fluidRow(
          column(width = 12,
                 plotOutput("DepthPlot"))
        ), fluidRow(
          column(width = 12,
                 plotOutput("RatePlot"))
        )
-  )
 )
