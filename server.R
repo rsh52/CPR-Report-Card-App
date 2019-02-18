@@ -227,8 +227,8 @@ shinyServer(function(input, output) {
     CCFp <- round(100*Zoll_CCF_Total, digits = 2)
     CCFo <- round(100*Time_Out_CCs, digits = 2)
     
-    CCFPlotDF <- data.frame(c(CCFp, CCFo))
-    colnames(CCFPlotDF) <- "ColName"
+    CCFPlotDF <- data.frame(c("In CC", "Out CC"), c(CCFp, CCFo))
+    colnames(CCFPlotDF) <- c("Var", "Val")
                             
     
     #Pie Plot Addition
@@ -243,10 +243,10 @@ shinyServer(function(input, output) {
         plot.title=element_text(size=14, face="bold")
       )
 
-    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$ColName, fill= CCFPlotDF$ColName)) +
+    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$Val, fill= CCFPlotDF$Var)) +
       geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
       blank_theme +
-      #scale_fill_manual(values = c("Percent in CCs" = "grey65", "Percent Out of CCs" = "salmon")) +
+      scale_fill_manual(values = c("In CC" = "#30AC30", "Out CC" = "#DB2E2E")) +
       theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
       labs(title = "CCF For Event") + theme(legend.position="none")
     

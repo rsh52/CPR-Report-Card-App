@@ -47,7 +47,7 @@ ui <- fluidPage(
                  inline = TRUE),
     #Download Button
     downloadButton('downloadReport'),
-    width = 2
+    width = 3
     
   ),
   # mainPanel(
@@ -61,8 +61,6 @@ ui <- fluidPage(
   column(12,
        "",
        fluidRow(
-         column(width = 3,
-                tableOutput("filetable")),
          column(width = 3,
                 tableOutput("AvgDepthRate")),
          column(width = 3,
