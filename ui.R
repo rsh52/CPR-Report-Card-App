@@ -29,12 +29,9 @@
 # ))
 # 
 library(shiny)
-library(ggplot2)
-library(plotly)
-library(dplyr)
 
 ui <- fluidPage(
-  headerPanel("Zoll Report Card"),
+  headerPanel("CPR Report Card"),
   
   sidebarPanel(
     #Selector for file upload
@@ -42,23 +39,13 @@ ui <- fluidPage(
               accept=c('text/csv', 'text/comma-separated-values,text/plain')),
     # Age input
     numericInput(inputId = "ageinput", label = "Enter Patient Age", value = 0, min = 0, max = 17.9, step = NA),
-    #Input Buttons
-    radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'),
-                 inline = TRUE),
     #Download Button
-    downloadButton('downloadReport'),
+    downloadButton("report", "Generate report"),
     width = 3
     
   ),
-  # mainPanel(
-  #   # Shows first 10 rows of input data set in table form
-  #   tableOutput("filetable"),
-  #   tableOutput("AvgDepthRate"),
-  #   tableOutput("CCF"),
-  #   plotOutput("DepthPlot"),
-  #   plotOutput("RatePlot")
-  # )
-  column(12,
+
+    column(12,
        "",
        fluidRow(
          column(width = 3,

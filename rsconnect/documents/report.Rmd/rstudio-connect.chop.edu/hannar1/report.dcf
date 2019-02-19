@@ -1,0 +1,12 @@
+name: report
+title: report
+username: hannar1
+account: hannar1
+server: rstudio-connect.chop.edu
+hostUrl: https://rstudio-connect.chop.edu/__api__
+appId: 419
+bundleId: 2611
+url: https://rstudio-connect.chop.edu/content/419/
+when: 1550601937.40004
+asMultiple: FALSE
+asStatic: FALSE

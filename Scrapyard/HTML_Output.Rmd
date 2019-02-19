@@ -1,0 +1,50 @@
+---
+title: "CPR Report Card"
+author: ""
+date: ""
+output: 
+  html_document
+params:
+  DepthPlot: "NULL"
+  RatePlot: "NULL"
+  CCFTbl: "NULL"
+  CCFPie: "NULL"
+  AvgDepthRate: "NULL"
+  
+  
+  
+---
+## Table 1: Average Depth and Rate for Event
+
+```{r Avg Depth Rate Table, echo = FALSE, fig.align='left'}
+# knitr::kable(list(params[["CCFtbl"]], params[["AvgDepthRate"]])) 
+params[["AvgDepthRate"]]
+```
+
+## Table 2: CCF Metrics for Event
+
+```{r CCF Table, echo = FALSE, fig.align='left'}
+params[["CCFTbl"]]
+```
+
+# Figure 1: CCF Pie Chart
+
+```{r CCF Pit, echo = FALSE, fig.align='right'}
+params[["CCFPie"]]
+```
+
+## Figure 2: Depth Summary
+
+The plot below shows depth markers for each compression registered over the course of the event overlaid by target guidelines appropriate for the selected age group.
+
+```{r depth plot, echo = FALSE}
+params[["DepthPlot"]]
+```
+
+# Figure 3: Depth Summary
+
+The plot below shows rate markers for each compression registered over the course of the event overlaid by target guidelines.
+
+```{r rate plot, echo = FALSE}
+params[["RatePlot"]]
+```
