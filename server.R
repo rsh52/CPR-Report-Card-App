@@ -1,16 +1,23 @@
-# Define server logic required to draw a histogram
+# The server.r script is responsible for all of the computation and coding
+# that makes the widgets, plots, and analytics of the app work. 
+
+# Especially important to note is that the downloadHandler is dependent on the 
+# report.Rmd file. The rmd serves to make the framework for the pdf that the 
+# downloadHandler feeds the information into. 
+
 shinyServer(function(input, output) {
   ##Load Libraries--------------------------------------------------------------
-  library(ggplot2)
-  library(plotly)
-  library(dplyr)
-  library(kableExtra)
-  library(knitr)
+  library(ggplot2) # Grammar of Graphics Library
+  library(plotly) # Addition of Plotly interactive displays if desired
+  library(dplyr) # Allows for grammar and piping ( %>% )
+  library(kableExtra) # Allows for interactive html tables
+  library(knitr) # Allows for interactive html tables
   
 # File Data Reactive & Output---------------------------------------------------   
-  #This function is responsible for loading in the selected file
+  # This function is responsible for loading in the selected file
   filedata <- reactive({
     infile <- input$datafile
+    
     if (is.null(infile)) {
       # User has not uploaded a file yet
       return(NULL)
@@ -18,11 +25,15 @@ shinyServer(function(input, output) {
     uploaddata <- read.csv(infile$datapath, skipNul = TRUE)
     colnames(uploaddata) <- c("Second", "Milisecond", "DepthIn", "RateCPM", "RVMMS",
                         "Valid")
+    # Convert time into one column of seconds + miliseconds
     uploaddata$FixedTime <- uploaddata$Second + uploaddata$Milisecond/1000
+    # Convert depth in inches column to new depth in cm column
     uploaddata$DepthCm <- uploaddata$DepthIn*2.54
+    # Remove inches, second, and milisecond columns
     uploaddata$DepthIn <- NULL
     uploaddata$Second <- NULL
     uploaddata$Milisecond <- NULL
+    # Shift order in case display of data is desired
     uploaddata <- uploaddata[c(4,5,1,2,3)]
     uploaddata
   })
@@ -49,6 +60,8 @@ shinyServer(function(input, output) {
     ADRframe <- data.frame(FillVars, c(AvgDp, AvgRp))
     colnames(ADRframe) <- c("Event Average Depth & Rate","")
     
+    # Uncomment below if you want interactive html, NOTE YOU WILL NOT BE ABLE TO GENERATE PDF
+    
     # ADRframe <-  ADRframe %>% 
     #   kable("html") %>%
     #   kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
@@ -57,7 +70,12 @@ shinyServer(function(input, output) {
   })
   
   #Outputs the average depth and rate
+  # Note that validate and need commands control initial blank error messages
   output$AvgDepthRate <- renderTable({
+    validate(
+      need(input$datafile != "", "Please Upload a Dataset"),
+      need(input$ageinput != "", "Please Select an Age")
+    )
     if (input$datafile == 0) return(NULL)
     AvgDepthRate()
   })
@@ -111,12 +129,17 @@ shinyServer(function(input, output) {
   
   #Outputs the average depth and rate
   output$CCF <- renderTable({
+    validate(
+      need(input$datafile != "", ""),
+      need(input$ageinput != "", "")
+    )
     if (input$datafile == 0) return(NULL)
     CCF()
   })
   
 ## CCF Pie Plot ----------------------------------------------------------------
   CCFPiePlot <- reactive({
+    
     Zoll_Data <- filedata()
     
     ##Same as CCF Code 
@@ -177,6 +200,10 @@ shinyServer(function(input, output) {
   
   #Outputs the average depth and rate
   output$CCFPiePlot <- renderPlot({
+    validate(
+      need(input$datafile != "", ""),
+      need(input$ageinput != "", "")
+    )
     if (input$datafile == 0) return(NULL)
     CCFPiePlot()
   })
@@ -191,30 +218,36 @@ shinyServer(function(input, output) {
       targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
                                 xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
                             fill = "seagreen3", alpha = 0.01)
+      targetDhi <- 4
+      targetDli <- 3.3
     } else if(input$ageinput >= 1 & input$ageinput <8){
       targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 4.4, colour = "blue", linetype = 2, size = 1)
       targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
                                 xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
                             fill = "seagreen3", alpha = 0.01)
+      targetDhi <- 5
+      targetDli <- 4.4
     } else if(input$ageinput >= 8 & input$ageinput <18){
       targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 6, colour = "red", linetype = 4, size = 1)
       targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
                                 xmax = max(Zoll_Data$FixedTime), ymin = 5, ymax = 6), 
                             fill = "seagreen3", alpha = 0.01)
+      targetDhi <- 6
+      targetDli <- 5
     } else{
       print("Inelligible")
     }
     
+    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "blue", "red")
     
-    Depth_Plot <- ggplot(Zoll_Data, 
-                         aes(x = FixedTime, y = DepthCm)) +
+    Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm, color = color)) +
       theme_bw() +
-      geom_bar(stat = "identity", width = 0.1, color = "blue") +
+      geom_bar(stat = "identity", width = 0.1) +
       xlab("Time (s)") + ylab("Depth (cm)") +
       targetDh + targetDl + targetDb + theme(axis.line = element_line(size = 1, colour = "black")) +
-      theme(axis.line = element_line(arrow = arrow()))
+      theme(axis.line = element_line(arrow = arrow())) + theme(legend.position="none")
     
     Depth_Plot
     
@@ -222,12 +255,17 @@ shinyServer(function(input, output) {
   
   #Outputs the average depth and rate
   output$DepthPlot <- renderPlot({
+    validate(
+      need(input$datafile != "", ""),
+      need(input$ageinput != "", "")
+    )
     if (input$datafile == 0) return(NULL)
     DepthPlot()
   })
   
 ## Rate Plot-------------------------------------------------------------------- 
   RatePlot <- reactive({
+    
     Zoll_Data <- filedata() 
     
     targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
@@ -236,10 +274,11 @@ shinyServer(function(input, output) {
                               xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120), 
                           fill = "seagreen3", alpha = 0.01)
     
-    Rate_Plot <- ggplot(Zoll_Data, 
-                        aes(x = FixedTime, y = RateCPM)) +
+    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "red", "blue")
+    
+    Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
       theme_bw() +
-      geom_point(stat = "identity", color = "blue", size = 1) +
+      geom_point(stat = "identity", color = Zoll_Data$colorRate, size = 1) +
       xlab("Time (s)") + ylab("Rate (cpm)") +
       targetRh + targetRl + targetRb + theme(axis.line = element_line(size = 1, colour = "black")) +
       theme(axis.line = element_line(arrow = arrow()))
@@ -250,6 +289,10 @@ shinyServer(function(input, output) {
   
   #Outputs the average depth and rate
   output$RatePlot <- renderPlot({
+    validate(
+      need(input$datafile != "", ""),
+      need(input$ageinput != "", "")
+    )
     if (input$datafile == 0) return(NULL)
     RatePlot()
   })
