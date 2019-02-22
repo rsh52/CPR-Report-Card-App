@@ -190,7 +190,7 @@ shinyServer(function(input, output) {
     CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$Val, fill= CCFPlotDF$Var)) +
       geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
       blank_theme +
-      scale_fill_manual(values = c("In CC" = "#30AC30", "Out CC" = "#DB2E2E")) +
+      scale_fill_manual(values = c("In CC" = "dodgerblue3", "Out CC" = "chocolate2")) +
       theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
       labs(title = "CCF For Event") + theme(legend.position="none")
     
@@ -215,38 +215,39 @@ shinyServer(function(input, output) {
     if(input$ageinput <1){
       targetDh <- geom_hline(yintercept = 4, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 3.3, colour = "blue", linetype = 2, size = 1)
-      targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                                xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
-                            fill = "seagreen3", alpha = 0.01)
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
+      #                           xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
+      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 4
       targetDli <- 3.3
     } else if(input$ageinput >= 1 & input$ageinput <8){
       targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 4.4, colour = "blue", linetype = 2, size = 1)
-      targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                                xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
-                            fill = "seagreen3", alpha = 0.01)
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
+      #                           xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
+      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 5
       targetDli <- 4.4
     } else if(input$ageinput >= 8 & input$ageinput <18){
       targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 6, colour = "red", linetype = 4, size = 1)
-      targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                                xmax = max(Zoll_Data$FixedTime), ymin = 5, ymax = 6), 
-                            fill = "seagreen3", alpha = 0.01)
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
+      #                           xmax = max(Zoll_Data$FixedTime), ymin = 5, ymax = 6), 
+      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 6
       targetDli <- 5
     } else{
       print("Inelligible")
     }
     
-    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "blue", "red")
+    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "chocolate2", "dodgerblue3")
     
-    Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm, color = color)) +
+    Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
       theme_bw() +
-      geom_bar(stat = "identity", width = 0.1) +
+      geom_bar(stat = "identity", width = 0.1, color = Zoll_Data$color) +
+      #geom_col(aes(color = color)) +
       xlab("Time (s)") + ylab("Depth (cm)") +
-      targetDh + targetDl + targetDb + theme(axis.line = element_line(size = 1, colour = "black")) +
+      targetDh + targetDl + theme(axis.line = element_line(size = 1, colour = "black")) +
       theme(axis.line = element_line(arrow = arrow())) + theme(legend.position="none")
     
     Depth_Plot
@@ -271,16 +272,15 @@ shinyServer(function(input, output) {
     targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
     targetRl <- geom_hline(yintercept = 100, colour = "red", linetype = 4, size = 1)
     targetRb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                              xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120), 
-                          fill = "seagreen3", alpha = 0.01)
+                              xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
     
-    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "red", "blue")
+    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "chocolate2", "dodgerblue3")
     
     Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
       theme_bw() +
       geom_point(stat = "identity", color = Zoll_Data$colorRate, size = 1) +
       xlab("Time (s)") + ylab("Rate (cpm)") +
-      targetRh + targetRl + targetRb + theme(axis.line = element_line(size = 1, colour = "black")) +
+      targetRh + targetRl  + theme(axis.line = element_line(size = 1, colour = "black")) +
       theme(axis.line = element_line(arrow = arrow()))
     
     Rate_Plot

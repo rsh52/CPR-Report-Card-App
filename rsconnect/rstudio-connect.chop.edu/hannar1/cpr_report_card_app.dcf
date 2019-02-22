@@ -5,9 +5,9 @@ account: hannar1
 server: rstudio-connect.chop.edu
 hostUrl: https://rstudio-connect.chop.edu/__api__
 appId: 403
-bundleId: 2638
+bundleId: 2651
 url: https://rstudio-connect.chop.edu/content/403/
-when: 1550764263.94664
+when: 1550844045.15291
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: report.html|report.pdf|report_files/figure-latex/depth plot-1.pdf|report_files/figure-latex/rate plot-1.pdf|report_files/figure-latex/unnamed-chunk-1-1.pdf|report_files/figure-latex/unnamed-chunk-9-1.pdf|Scrapyard/HTML_Output.Rmd|Scrapyard/PDF_Output.Rmd|Zoll_File/IndividualCompressions2467-109.csv|Zoll_File/IndividualCompressions5246-40.csv|Zoll_File/IndividualCompressions5249-83.csv|Zoll_File/IndividualCompressions5449-15.csv
+ignoredFiles: report.html|report.pdf|Source_Script.R|report_files/figure-latex/depth plot-1.pdf|report_files/figure-latex/rate plot-1.pdf|report_files/figure-latex/unnamed-chunk-1-1.pdf|report_files/figure-latex/unnamed-chunk-9-1.pdf|Scrapyard/HTML_Output.Rmd|Scrapyard/PDF_Output.Rmd|Zoll_File/IndividualCompressions2467-109.csv|Zoll_File/IndividualCompressions5246-40.csv|Zoll_File/IndividualCompressions5249-83.csv|Zoll_File/IndividualCompressions5449-15.csv
