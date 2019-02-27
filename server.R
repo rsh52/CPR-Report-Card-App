@@ -82,7 +82,7 @@ shinyServer(function(input, output) {
 
 # CCF Tbl ----------------------------------------------------------------------
   CCF <- reactive({
-    Zoll_Data <- filedata()
+    #Zoll_Data <- filedata()
     
     for (i in 1:nrow(Zoll_Data)) {
       Zoll_Data$Pause[i] <- ifelse(
@@ -119,10 +119,6 @@ shinyServer(function(input, output) {
     CCFdf <- data.frame(CCFlabels, c(CCFp, CCFo, CCn, CCt))
     colnames(CCFdf) <- c("Event CCF Metrics", "")
     
-    # CCFdf <- CCFdf %>%
-    #   kable("html") %>%
-    #   kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
-    
     CCFdf
                  
   })
@@ -140,15 +136,15 @@ shinyServer(function(input, output) {
 ## CCF Pie Plot ----------------------------------------------------------------
   CCFPiePlot <- reactive({
     
-    Zoll_Data <- filedata()
+    #Zoll_Data <- filedata()
     
     ##Same as CCF Code 
     
-    for (i in 1:nrow(Zoll_Data)) {
-      Zoll_Data$Pause[i] <- ifelse(
-        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
-    }
-    
+    # for (i in 1:nrow(Zoll_Data)) {
+    #   Zoll_Data$Pause[i] <- ifelse(
+    #     (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
+    # }
+    # 
     
     Zoll_CCF_Time_In <- 0 # Initialize new variable to test time in compressions
     
@@ -210,8 +206,7 @@ shinyServer(function(input, output) {
   
 ## Depth Plot ------------------------------------------------------------------
   DepthPlot <- reactive({
-    Zoll_Data <- filedata() 
-    
+
     if(input$ageinput <1){
       targetDh <- geom_hline(yintercept = 4, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 3.3, colour = "blue", linetype = 2, size = 1)
@@ -267,8 +262,6 @@ shinyServer(function(input, output) {
 ## Rate Plot-------------------------------------------------------------------- 
   RatePlot <- reactive({
     
-    Zoll_Data <- filedata() 
-    
     targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
     targetRl <- geom_hline(yintercept = 100, colour = "red", linetype = 4, size = 1)
     targetRb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
@@ -296,33 +289,6 @@ shinyServer(function(input, output) {
     if (input$datafile == 0) return(NULL)
     RatePlot()
   })
-
-
-
-  
-  # output$report <- downloadHandler(
-  #   # For PDF output, change this to "report.pdf"
-  #   filename = "report.pdf",
-  #   content = function(file) {
-  #     # Copy the report file to a temporary directory before processing it, in
-  #     # case we don't have write permissions to the current working dir (which
-  #     # can happen when deployed).
-  #     tempReport <- file.path(tempdir(), "report.Rmd")
-  #     file.copy("report.Rmd", tempReport, overwrite = TRUE)
-  #     
-  #     # Set up parameters to pass to Rmd document
-  #     params <- list(n = input$datafile)
-  #     
-  #     # Knit the document, passing in the `params` list, and eval it in a
-  #     # child of the global environment (this isolates the code in the document
-  #     # from the code in this app).
-  #     rmarkdown::render(tempReport, output_file = file,
-  #                       params = params,
-  #                       envir = new.env(parent = globalenv())
-  #     )
-  #   }
-  # )
-  
 
 #* Download Handler------------------------------------------------------------
   
