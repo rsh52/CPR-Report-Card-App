@@ -25,6 +25,8 @@ ui <- fluidPage(
          column(width = 3,
                 tableOutput("AvgDepthRate")),
          column(width = 3,
+                tableOutput("PercDepthRate")),
+         column(width = 3,
                 tableOutput("CCF")),
          column(width = 3,
                 plotOutput("CCFPiePlot"))

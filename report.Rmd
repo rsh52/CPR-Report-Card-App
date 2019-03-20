@@ -13,7 +13,7 @@ params:
   CCFTbl: "NULL"
   CCFPie: "NULL"
   AvgDepthRate: "NULL"
-  
+  PercTbl: "NULL"
   
   
 ---
@@ -36,11 +36,20 @@ knitr::kable(params[["CCFTbl"]], format = "latex")
   \end{floatrow}
 \end{figure}
 
+\begin{figure}[H]
+  \begin{floatrow}
+    \ffigbox{%
+```{r, fig.align = "right", echo = F}
+knitr::kable(params[["PercTbl"]], format = "latex")
+```
+    }{\caption{Percent Table}}
+  \end{floatrow}
+\end{figure}
 
-```{r depth plot, echo = FALSE}
+```{r depth plot, echo = FALSE, fig.width=15, fig.height=10}
 params[["DepthPlot"]]
 ```
 
-```{r rate plot, echo = FALSE}
+```{r rate plot, echo = FALSE, fig.width=15, fig.height=10}
 params[["RatePlot"]]
 ```

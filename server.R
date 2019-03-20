@@ -80,9 +80,54 @@ shinyServer(function(input, output) {
     AvgDepthRate()
   })
 
-# CCF Tbl ----------------------------------------------------------------------
+  # Percent In Target Ranges---------------------------------------------------------- 
+  # 
+  PercDepthRate <- reactive({
+    Zoll_Data <- filedata()
+    
+    
+    if(input$ageinput <1){
+      targetDhi <- 4
+      targetDli <- 3.3
+    } else if(input$ageinput >= 1 & input$ageinput <8){
+      targetDhi <- 5
+      targetDli <- 4.4
+    } else if(input$ageinput >= 8 & input$ageinput <18){
+      targetDhi <- 6
+      targetDli <- 5
+    } else{
+      print("Inelligible")
+    }
+    
+    Zoll_CC_Total <- nrow(Zoll_Data)
+    Depth_CC_In <- length(subset(Zoll_Data$DepthCm, Zoll_Data$DepthCm >= targetDli & Zoll_Data$DepthCm <= targetDhi))
+    Depth_Perc_In <- 100*round(Depth_CC_In / Zoll_CC_Total,2)
+    Rate_CC_In <- length(subset(Zoll_Data$RateCPM, Zoll_Data$RateCPM >= 100 & Zoll_Data$RateCPM <= 120))
+    Rate_Perc_In <- 100*round(Rate_CC_In / Zoll_CC_Total,2)
+    
+    PercInframe <- data.frame(
+      c("Compressions in Target Depth: ", "Compressions in Target Rate: "),
+      c(paste0(Depth_Perc_In, "%"), paste0(Rate_Perc_In,"%"))
+    )
+    colnames(PercInframe) <- c("", "Percentage")
+    
+    PercInframe
+  })
+  
+  #Outputs the average depth and rate
+  # Note that validate and need commands control initial blank error messages
+  output$PercDepthRate <- renderTable({
+    validate(
+      need(input$datafile != "", "Please Upload a Dataset"),
+      need(input$ageinput != "", "Please Select an Age")
+    )
+    if (input$datafile == 0) return(NULL)
+    PercDepthRate()
+  })
+  
+  # CCF Tbl ----------------------------------------------------------------------
   CCF <- reactive({
-    #Zoll_Data <- filedata()
+    Zoll_Data <- filedata()
     
     for (i in 1:nrow(Zoll_Data)) {
       Zoll_Data$Pause[i] <- ifelse(
@@ -136,15 +181,15 @@ shinyServer(function(input, output) {
 ## CCF Pie Plot ----------------------------------------------------------------
   CCFPiePlot <- reactive({
     
-    #Zoll_Data <- filedata()
-    
-    ##Same as CCF Code 
-    
-    # for (i in 1:nrow(Zoll_Data)) {
-    #   Zoll_Data$Pause[i] <- ifelse(
-    #     (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
-    # }
-    # 
+    Zoll_Data <- filedata()
+
+    ##Same as CCF Code
+
+    for (i in 1:nrow(Zoll_Data)) {
+      Zoll_Data$Pause[i] <- ifelse(
+        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
+    }
+
     
     Zoll_CCF_Time_In <- 0 # Initialize new variable to test time in compressions
     
@@ -186,7 +231,7 @@ shinyServer(function(input, output) {
     CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$Val, fill= CCFPlotDF$Var)) +
       geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
       blank_theme +
-      scale_fill_manual(values = c("In CC" = "dodgerblue3", "Out CC" = "chocolate2")) +
+      scale_fill_manual(values = c("In CC" = "forestgreen", "Out CC" = "chocolate2")) +
       theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
       labs(title = "CCF For Event") + theme(legend.position="none")
     
@@ -206,6 +251,7 @@ shinyServer(function(input, output) {
   
 ## Depth Plot ------------------------------------------------------------------
   DepthPlot <- reactive({
+    Zoll_Data <- filedata()
 
     if(input$ageinput <1){
       targetDh <- geom_hline(yintercept = 4, colour = "red", linetype = 4, size = 1)
@@ -235,7 +281,7 @@ shinyServer(function(input, output) {
       print("Inelligible")
     }
     
-    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "chocolate2", "dodgerblue3")
+    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "chocolate2", "forestgreen")
     
     Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
       theme_bw() +
@@ -261,13 +307,14 @@ shinyServer(function(input, output) {
   
 ## Rate Plot-------------------------------------------------------------------- 
   RatePlot <- reactive({
+    Zoll_Data <- filedata()
     
     targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
     targetRl <- geom_hline(yintercept = 100, colour = "red", linetype = 4, size = 1)
     targetRb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
                               xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
     
-    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "chocolate2", "dodgerblue3")
+    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "chocolate2", "forestgreen")
     
     Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
       theme_bw() +
@@ -305,6 +352,7 @@ shinyServer(function(input, output) {
                           RatePlot = RatePlot(),
                           CCFTbl = CCF(),
                           CCFPie = CCFPiePlot(),
+                          PercTbl = PercDepthRate(),
                           AvgDepthRate = AvgDepthRate()),
             envir = new.env(parent = globalenv())
           ) 

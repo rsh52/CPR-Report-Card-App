@@ -65,7 +65,7 @@
 \usepackage{titling}
 
 % Create subtitle command for use in maketitle
-\newcommand{\subtitle}[1]{
+\providecommand{\subtitle}[1]{
   \posttitle{
     \begin{center}\large#1\end{center}
     }
@@ -111,6 +111,23 @@ Total Time of Event (min) & 59.46\\
 \hline
 \end{tabular}
     }{\caption{CCF Table}}
+  \end{floatrow}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{floatrow}
+    \ffigbox{%
+
+\begin{tabular}{l|l}
+\hline
+ & Percentage\\
+\hline
+Compressions in Target Depth: & 38\%\\
+\hline
+Compressions in Target Rate: & 55\%\\
+\hline
+\end{tabular}
+    }{\caption{Percent Table}}
   \end{floatrow}
 \end{figure}
 
