@@ -13,7 +13,7 @@ shinyServer(function(input, output) {
   library(kableExtra) # Allows for interactive html tables
   library(knitr) # Allows for interactive html tables
   
-# File Data Reactive & Output---------------------------------------------------   
+# File Data --------------------------------------------------------------------
   # This function is responsible for loading in the selected file
   filedata <- reactive({
     infile <- input$datafile
@@ -131,25 +131,34 @@ shinyServer(function(input, output) {
     
     for (i in 1:nrow(Zoll_Data)) {
       Zoll_Data$Pause[i] <- ifelse(
-        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
+        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", 
+        ifelse(Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i] >60, "ROSC", "Pause"))
     }
     
     
-    Zoll_CCF_Time_In <- 0 # Initialize new variable to test time in compressions
+    Zoll_Data$CCF_Time_In <- 0 # Initialize new variable to test time in compressions
     
     for(i in 1:nrow(Zoll_Data)) {
-      ifelse((Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) <1, 
-             Zoll_CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_CCF_Time_In[i] <-  0)
+      ifelse(Zoll_Data$Pause[i] == "In range", 
+             Zoll_Data$CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
+             Zoll_Data$CCF_Time_In[i] <- 0)
     }
     
-    Zoll_CCF_Total <- sum(Zoll_CCF_Time_In)/(max(Zoll_Data$FixedTime) - 
-                                               min(Zoll_Data$FixedTime))
+    Zoll_Data$ROSC_Time <- 0
     
-    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_CCF_Time_In))/
-      (max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))
+    for(i in 1:nrow(Zoll_Data)) {
+      ifelse(Zoll_Data$Pause[i] == "ROSC",
+             Zoll_Data$ROSC_Time[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
+             Zoll_Data$ROSC_Time[i] <- 0)
+    }
     
-    Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid"))
+    Zoll_CCF_Total <- sum(Zoll_Data$CCF_Time_In)/((max(Zoll_Data$FixedTime) - 
+                                               min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
+    
+    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_Data$CCF_Time_In)-sum(Zoll_Data$ROSC_Time))/
+      ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
+    
+    Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid" | Zoll_Data$Valid == "1"))
     
     Minute_Time <- max(Zoll_Data$FixedTime)/60
     
@@ -187,30 +196,39 @@ shinyServer(function(input, output) {
 
     for (i in 1:nrow(Zoll_Data)) {
       Zoll_Data$Pause[i] <- ifelse(
-        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", "Pause")
+        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", 
+        ifelse(Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i] >60, "ROSC", "Pause"))
     }
-
     
-    Zoll_CCF_Time_In <- 0 # Initialize new variable to test time in compressions
+    
+    Zoll_Data$CCF_Time_In <- 0 # Initialize new variable to test time in compressions
     
     for(i in 1:nrow(Zoll_Data)) {
-      ifelse((Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) <1, 
-             Zoll_CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_CCF_Time_In[i] <-  0)
+      ifelse(Zoll_Data$Pause[i] == "In range", 
+             Zoll_Data$CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
+             Zoll_Data$CCF_Time_In[i] <- 0)
     }
     
-    Zoll_CCF_Total <- sum(Zoll_CCF_Time_In)/(max(Zoll_Data$FixedTime) - 
-                                               min(Zoll_Data$FixedTime))
+    Zoll_Data$ROSC_Time <- 0
     
-    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_CCF_Time_In))/
-      (max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))
+    for(i in 1:nrow(Zoll_Data)) {
+      ifelse(Zoll_Data$Pause[i] == "ROSC",
+             Zoll_Data$ROSC_Time[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
+             Zoll_Data$ROSC_Time[i] <- 0)
+    }
+    
+    Zoll_CCF_Total <- sum(Zoll_Data$CCF_Time_In)/((max(Zoll_Data$FixedTime) - 
+                                                     min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
+    
+    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_Data$CCF_Time_In)-sum(Zoll_Data$ROSC_Time))/
+      ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
     
     Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid"))
     
     Minute_Time <- max(Zoll_Data$FixedTime)/60
     
-    CCFp <- round(100*Zoll_CCF_Total, digits = 2)
-    CCFo <- round(100*Time_Out_CCs, digits = 2)
+    CCFp <- round(Zoll_CCF_Total, digits = 2)
+    CCFo <- round(Time_Out_CCs, digits = 2)
     
     CCFPlotDF <- data.frame(c("In CC", "Out CC"), c(CCFp, CCFo))
     colnames(CCFPlotDF) <- c("Var", "Val")
@@ -233,7 +251,9 @@ shinyServer(function(input, output) {
       blank_theme +
       scale_fill_manual(values = c("In CC" = "forestgreen", "Out CC" = "chocolate2")) +
       theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
-      labs(title = "CCF For Event") + theme(legend.position="none")
+      labs(title = "CCF For Event") + theme(legend.position="none") +
+      geom_text(aes(label = percent(CCFPlotDF$Val)), 
+                size = 8, position = position_stack(vjust = 0.5))
     
     CCF_Pie
     

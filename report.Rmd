@@ -46,10 +46,10 @@ knitr::kable(params[["PercTbl"]], format = "latex")
   \end{floatrow}
 \end{figure}
 
-```{r depth plot, echo = FALSE, fig.width=15, fig.height=10}
+```{r depth plot, echo = FALSE, fig.width=15, fig.height=8}
 params[["DepthPlot"]]
 ```
 
-```{r rate plot, echo = FALSE, fig.width=15, fig.height=10}
+```{r rate plot, echo = FALSE, fig.width=15, fig.height=8}
 params[["RatePlot"]]
 ```

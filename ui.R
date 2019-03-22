@@ -14,6 +14,7 @@ ui <- fluidPage(
     # Age input - Defines criteria for depth guidelines
     numericInput(inputId = "ageinput", label = "Enter Patient Age", value = 0, min = 0, max = 17.9, step = NA),
     #Download Button - Currently exports toa PDF file
+    Sys.setenv(PATH = paste("/var/texlive/2018/bin/x86_64-linux", Sys.getenv("PATH"), sep=.Platform$path.sep)),
     downloadButton("report", "Generate report"),
     width = 3
     
