@@ -87,11 +87,11 @@ shinyServer(function(input, output) {
     
     
     if(input$ageinput <1){
-      targetDhi <- 4
-      targetDli <- 3.3
+      targetDhi <- 4.6
+      targetDli <- 3.6
     } else if(input$ageinput >= 1 & input$ageinput <8){
-      targetDhi <- 5
-      targetDli <- 4.4
+      targetDhi <- 5.6
+      targetDli <- 4.6
     } else if(input$ageinput >= 8 & input$ageinput <18){
       targetDhi <- 6
       targetDli <- 5
@@ -274,16 +274,16 @@ shinyServer(function(input, output) {
     Zoll_Data <- filedata()
 
     if(input$ageinput <1){
-      targetDh <- geom_hline(yintercept = 4, colour = "red", linetype = 4, size = 1)
-      targetDl <- geom_hline(yintercept = 3.3, colour = "blue", linetype = 2, size = 1)
+      targetDh <- geom_hline(yintercept = 4.6, colour = "red", linetype = 4, size = 1)
+      targetDl <- geom_hline(yintercept = 3.6, colour = "blue", linetype = 2, size = 1)
       # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
       #                           xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
       #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 4
       targetDli <- 3.3
     } else if(input$ageinput >= 1 & input$ageinput <8){
-      targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
-      targetDl <- geom_hline(yintercept = 4.4, colour = "blue", linetype = 2, size = 1)
+      targetDh <- geom_hline(yintercept = 5.6, colour = "red", linetype = 4, size = 1)
+      targetDl <- geom_hline(yintercept = 4.6, colour = "blue", linetype = 2, size = 1)
       # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
       #                           xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
       #                       fill = "seagreen3", alpha = 0.01)
