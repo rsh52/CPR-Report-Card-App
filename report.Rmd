@@ -38,18 +38,26 @@ knitr::kable(params[["CCFTbl"]], format = "latex")
 
 \begin{figure}[H]
   \begin{floatrow}
-    \ffigbox{%
+    \btabbox{%
+```{r, fig.align = "right", echo = F}
+knitr::kable(params[["AvgDepthRate"]], format = "latex")
+```
+    }{\caption{Average Table}}
+    
+     \btabbox{%
 ```{r, fig.align = "right", echo = F}
 knitr::kable(params[["PercTbl"]], format = "latex")
 ```
-    }{\caption{Percent Table}}
+   }{\caption{Percent Table}}
   \end{floatrow}
 \end{figure}
 
-```{r depth plot, echo = FALSE, fig.width=15, fig.height=8}
+Please note that the CCF calculations for this report **do not** take into account periods of intermittent ROSC. This is a hard chest compression fraction calculation defined exclusively by time in compressions over the total time of the event.
+
+```{r depth plot, echo = FALSE, fig.width=15, fig.height=8, warning=FALSE}
 params[["DepthPlot"]]
 ```
 
-```{r rate plot, echo = FALSE, fig.width=15, fig.height=8}
+```{r rate plot, echo = FALSE, fig.width=15, fig.height=8, warning=FALSE}
 params[["RatePlot"]]
 ```

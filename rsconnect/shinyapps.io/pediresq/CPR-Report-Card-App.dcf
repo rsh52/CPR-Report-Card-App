@@ -1,0 +1,13 @@
+name: CPR-Report-Card-App
+title: CPR-Report-Card-App
+username:
+account: pediresq
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 974712
+bundleId: 2169405
+url: https://pediresq.shinyapps.io/CPR-Report-Card-App/
+when: 1561130335.22597
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|downloadReport|README.md|report.html|report.pdf|report_files/figure-latex/depth plot-1.pdf|report_files/figure-latex/rate plot-1.pdf|report_files/figure-latex/unnamed-chunk-1-1.pdf|report_files/figure-latex/unnamed-chunk-9-1.pdf|Scrapyard/HTML_Output.Rmd|Scrapyard/PDF_Output.Rmd|Zoll_File
