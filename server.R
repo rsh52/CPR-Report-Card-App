@@ -175,7 +175,7 @@ shinyServer(function(input, output) {
     CCFdf <- data.frame(CCFlabels, c(CCFp, CCFo, CCn, CCt))
     colnames(CCFdf) <- c("Event CCF Metrics", "")
     
-    CCFdf
+    CCFdf 
     
   })
   
@@ -306,6 +306,9 @@ shinyServer(function(input, output) {
     
     Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "#ad1f1f", "#55ac5d")
     
+    Zoll_Data <- Zoll_Data %>% 
+      filter(DepthCm > 0.4, DepthCm < 10)
+    
     Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
       theme_bw() +
       geom_bar(stat = "identity", width = 0.1, color = Zoll_Data$color) +
@@ -340,6 +343,9 @@ shinyServer(function(input, output) {
                               xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
     
     Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "#ad1f1f", "#55ac5d")
+    
+    Zoll_Data <- Zoll_Data %>% 
+      filter(RateCPM > 50, RateCPM < 180)
     
     Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
       theme_bw() +
@@ -398,6 +404,9 @@ shinyServer(function(input, output) {
     
     Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "#ad1f1f", "#55ac5d")
     
+    Zoll_Data <- Zoll_Data %>% 
+      filter(DepthCm > 0.4, DepthCm < 10)
+    
     Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
       theme_bw() +
       geom_bar(stat = "identity", width = 0.1, color = Zoll_Data$color) +
@@ -430,6 +439,9 @@ shinyServer(function(input, output) {
                               xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
     
     Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "#ad1f1f", "#55ac5d")
+    
+    Zoll_Data <- Zoll_Data %>% 
+      filter(RateCPM > 50, RateCPM < 180)
     
     Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
       theme_bw() +

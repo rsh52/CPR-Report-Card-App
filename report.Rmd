@@ -1,5 +1,5 @@
 ---
-title: "CPR Report Card"
+title: "pediRES-Q CPR Report Card"
 author: ""
 date: ""
 header-includes:
@@ -18,12 +18,17 @@ params:
   
 ---
 
+```{r, include=FALSE}
+library(knitr)
+library(kableExtra)
+```
+
 \newfloatcommand{btabbox}{table}
 
 \begin{figure}[H]
   \begin{floatrow}
     \ffigbox{%
-```{r, fig.align = "right", echo = F}
+```{r, fig.align = "right", echo = F, fig.height=3, fig.align='center'}
 params[["CCFPie"]]
 ```
     }{\caption{CCF Pie Chart}}
@@ -61,3 +66,5 @@ params[["DepthPlot"]]
 ```{r rate plot, echo = FALSE, fig.width=15, fig.height=8, warning=FALSE}
 params[["RatePlot"]]
 ```
+
+* A filter has been applied to remove all compression depths registering <0.4cm or >10cm and all compression rates registering <50cpm or >180cpm. 
