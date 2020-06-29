@@ -5,6 +5,8 @@
 library(shiny)
 library(shinythemes)
 library(plotly)
+library(highcharter)
+library(tidyverse)
 
 ui <- fluidPage(
   theme = shinytheme("spacelab"),

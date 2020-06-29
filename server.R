@@ -12,6 +12,7 @@ shinyServer(function(input, output) {
   library(dplyr) # Allows for grammar and piping ( %>% )
   library(kableExtra) # Allows for interactive html tables
   library(knitr) # Allows for interactive html tables
+  library(highcharter)
   
   # File Data --------------------------------------------------------------------
   # This function is responsible for loading in the selected file
@@ -35,7 +36,6 @@ shinyServer(function(input, output) {
     uploaddata$Milisecond <- NULL
     # Shift order in case display of data is desired
     uploaddata <- uploaddata[c(4,5,1,2,3)]
-    uploaddata
   })
   
   #This previews the CSV data file through the Zoll_Data frame
@@ -54,8 +54,8 @@ shinyServer(function(input, output) {
     Zoll_Rate_Total_Average <- round(mean(Zoll_Data$RateCPM, na.rm = TRUE), digits = 1) #Average Rate for the event
     ADRframe <- data.frame(Zoll_Depth_Total_Average, Zoll_Rate_Total_Average)
     
-    AvgDp <- print(paste0(round(Zoll_Depth_Total_Average, digits = 4)))
-    AvgRp <- print(paste0(round(Zoll_Rate_Total_Average, digits = 4)))
+    AvgDp <- paste0(round(Zoll_Depth_Total_Average, digits = 4))
+    AvgRp <- paste0(round(Zoll_Rate_Total_Average, digits = 4))
     FillVars <- c("Depth (cm)", "Rate (cpm)")
     ADRframe <- data.frame(FillVars, c(AvgDp, AvgRp))
     colnames(ADRframe) <- c("Event Average Depth & Rate","")
@@ -248,13 +248,13 @@ shinyServer(function(input, output) {
         plot.title=element_text(size=14, face="bold")
       )
     
-    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = CCFPlotDF$Val, fill= CCFPlotDF$Var)) +
+    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = Val, fill= Var)) +
       geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
       blank_theme +
       scale_fill_manual(values = c("In CC" = "#55ac5d", "Out CC" = "#ad1f1f")) +
       theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
       labs(title = "CCF For Event") + theme(legend.position="none") +
-      geom_text(aes(label = percent(CCFPlotDF$Val)), 
+      geom_text(aes(label = scales::percent(Val)), 
                 size = 8, position = position_stack(vjust = 0.5))
     #theme(plot.background = element_rect((fill = "#343434")))
     
