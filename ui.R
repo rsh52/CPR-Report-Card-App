@@ -34,17 +34,17 @@ ui <- fluidPage(
     column(width = 3,
            tableOutput("PercDepthRate")),
     column(width = 3,
-           plotOutput("CCFPiePlot"))
+           highchartOutput("CCFPiePlot"))
   )),
   
     column(12,
        "",
        fluidRow(
          column(width = 12,
-                plotlyOutput("DepthPlotly"))
+                highchartOutput("DepthHC"))
        ), fluidRow(
          column(width = 12,
-                plotlyOutput("RatePlotly"))
+                highchartOutput("RateHC"))
        )
 )
 )

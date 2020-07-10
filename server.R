@@ -6,14 +6,7 @@
 # downloadHandler feeds the information into. 
 
 shinyServer(function(input, output) {
-  ##Load Libraries--------------------------------------------------------------
-  library(ggplot2) # Grammar of Graphics Library
-  library(plotly) # Addition of Plotly interactive displays if desired
-  library(dplyr) # Allows for grammar and piping ( %>% )
-  library(kableExtra) # Allows for interactive html tables
-  library(knitr) # Allows for interactive html tables
-  library(highcharter)
-  
+
   # File Data --------------------------------------------------------------------
   # This function is responsible for loading in the selected file
   filedata <- reactive({
@@ -23,19 +16,30 @@ shinyServer(function(input, output) {
       # User has not uploaded a file yet
       return(NULL)
     }
-    uploaddata <- read.csv(infile$datapath, skipNul = TRUE)
-    colnames(uploaddata) <- c("Second", "Milisecond", "DepthIn", "RateCPM", "RVMMS",
+    filedata <- read.csv(infile$datapath, skipNul = TRUE)
+    colnames(filedata) <- c("Second", "Milisecond", "DepthIn", "RateCPM", "RVMMS",
                               "Valid")
-    # Convert time into one column of seconds + miliseconds
-    uploaddata$FixedTime <- uploaddata$Second + uploaddata$Milisecond/1000
-    # Convert depth in inches column to new depth in cm column
-    uploaddata$DepthCm <- uploaddata$DepthIn*2.54/1000
-    # Remove inches, second, and milisecond columns
-    uploaddata$DepthIn <- NULL
-    uploaddata$Second <- NULL
-    uploaddata$Milisecond <- NULL
-    # Shift order in case display of data is desired
-    uploaddata <- uploaddata[c(4,5,1,2,3)]
+    
+    # Convert second and milisecond into one Time Column
+    # Drop Inches and extra time columns
+    # Create time difference and period columns to define pause/rosc/CCs,
+    # and inform CCF calculations
+    filedata <- filedata %>%
+      mutate(Time = Second + Milisecond/1000,
+             DepthCm = DepthIn*2.54/1000) %>% 
+      select(Time, DepthCm, RateCPM, RVMMS, Valid) %>% 
+      mutate(
+        TDiff = Time - lag(Time), # Create a Time difference column with lag
+        Period = if_else(TDiff <2, "compressions", 
+                         ifelse(TDiff >=2 & TDiff < 120, "pause", 
+                                ifelse(TDiff >= 120, "rosc", "NA")))
+      )
+    
+    # Replace NA of first compression with 0 and compressions
+    # NOTE THIS DOES NOT CURRENTLY WORK IN THE OUTPUT
+    # filedata$TDiff[is.na(filedata$TDiff)] <- 0
+    # filedata$Period[is.na(filedata$Period)] <- "compressions"
+    
   })
   
   #This previews the CSV data file through the Zoll_Data frame
@@ -50,26 +54,20 @@ shinyServer(function(input, output) {
   AvgDepthRate <- reactive({
     Zoll_Data <- filedata()
     
-    Zoll_Depth_Total_Average <- round(mean(Zoll_Data$DepthCm, na.rm = TRUE), digits = 1) #Average Depth for the event
-    Zoll_Rate_Total_Average <- round(mean(Zoll_Data$RateCPM, na.rm = TRUE), digits = 1) #Average Rate for the event
-    ADRframe <- data.frame(Zoll_Depth_Total_Average, Zoll_Rate_Total_Average)
+    ADRframe <- Zoll_Data %>% 
+      mutate(DepthAvg = round(mean(DepthCm, na.rm = T), digits = 1),
+             RateAvg = round(mean(RateCPM, na.rm = T), digits = 1)) %>% 
+      select(DepthAvg, RateAvg) %>% 
+      distinct()
     
-    AvgDp <- paste0(round(Zoll_Depth_Total_Average, digits = 4))
-    AvgRp <- paste0(round(Zoll_Rate_Total_Average, digits = 4))
     FillVars <- c("Depth (cm)", "Rate (cpm)")
-    ADRframe <- data.frame(FillVars, c(AvgDp, AvgRp))
+    ADRframe <- data.frame(FillVars, c(ADRframe$DepthAvg, ADRframe$RateAvg))
     colnames(ADRframe) <- c("Event Average Depth & Rate","")
-    
-    # Uncomment below if you want interactive html, NOTE YOU WILL NOT BE ABLE TO GENERATE PDF
-    
-    # ADRframe <-  ADRframe %>% 
-    #   kable("html") %>%
-    #   kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
     
     ADRframe
   })
   
-  #Outputs the average depth and rate
+  # Outputs the average depth and rate
   # Note that validate and need commands control initial blank error messages
   output$AvgDepthRate <- renderTable({
     validate(
@@ -129,53 +127,13 @@ shinyServer(function(input, output) {
   CCF <- reactive({
     Zoll_Data <- filedata()
     
-    # If the next time point minus the current time point is <1 label as "in range"
-    # Else if the difference is >60 assume it is ROSC, if it is between label it "Pause"
-    for (i in 1:nrow(Zoll_Data)) {
-      Zoll_Data$Pause[i] <- ifelse(
-        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", 
-        ifelse(Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i] >60, "ROSC", "Pause"))
-    }
+    CCFTbl <- Zoll_Data %>% 
+      summarise(Compressions = paste0(round(sum(Period == "compressions" | Period == "rosc", na.rm = T)/nrow(.), 4)*100, "%"),
+                Pause = paste0(round(sum(Period == "pause", na.rm = T)/nrow(.), 4)*100, "%"))
     
-    
-    Zoll_Data$CCF_Time_In <- 0 # Initialize new variable to test time in compressions
-    
-    for(i in 1:nrow(Zoll_Data)) {
-      ifelse(Zoll_Data$Pause[i] == "In range", 
-             Zoll_Data$CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_Data$CCF_Time_In[i] <- 0)
-    }
-    
-    Zoll_Data$ROSC_Time <- 0
-    
-    for(i in 1:nrow(Zoll_Data)) {
-      ifelse(Zoll_Data$Pause[i] == "ROSC",
-             Zoll_Data$ROSC_Time[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_Data$ROSC_Time[i] <- 0)
-    }
-    
-    Zoll_CCF_Total <- sum(Zoll_Data$CCF_Time_In)/((max(Zoll_Data$FixedTime) - 
-                                                     min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
-    
-    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_Data$CCF_Time_In)-sum(Zoll_Data$ROSC_Time))/
-      ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
-    
-    Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid" | Zoll_Data$Valid == "1"))
-    
-    Minute_Time <- max(Zoll_Data$FixedTime)/60
-    
-    CCFp <- print(paste0(round(100*Zoll_CCF_Total, digits = 2), "%"))
-    CCFo <- print(paste0(round(100*Time_Out_CCs, digits = 2), "%"))
-    
-    CCn <- print(paste0(Total_Number_CCs))
-    CCt <- print(paste0(round(Minute_Time, digits = 2)))
-    
-    CCFlabels <- c("CCF (%)", "(%) Not in CCs", "Total CCs (n)", "Total Time of Event (min)")
-    
-    CCFdf <- data.frame(CCFlabels, c(CCFp, CCFo, CCn, CCt))
-    colnames(CCFdf) <- c("Event CCF Metrics", "")
-    
-    CCFdf 
+    CCFTbl %>% 
+      mutate(" " = "CCF Score: ") %>% 
+      select(" ", Compressions, Pause)
     
   })
   
@@ -194,76 +152,26 @@ shinyServer(function(input, output) {
     
     Zoll_Data <- filedata()
     
-    ##Same as CCF Code
-    
-    for (i in 1:nrow(Zoll_Data)) {
-      Zoll_Data$Pause[i] <- ifelse(
-        (Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i]) < 1, "In range", 
-        ifelse(Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i] >60, "ROSC", "Pause"))
-    }
-    
-    
-    Zoll_Data$CCF_Time_In <- 0 # Initialize new variable to test time in compressions
-    
-    for(i in 1:nrow(Zoll_Data)) {
-      ifelse(Zoll_Data$Pause[i] == "In range", 
-             Zoll_Data$CCF_Time_In[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_Data$CCF_Time_In[i] <- 0)
-    }
-    
-    Zoll_Data$ROSC_Time <- 0
-    
-    for(i in 1:nrow(Zoll_Data)) {
-      ifelse(Zoll_Data$Pause[i] == "ROSC",
-             Zoll_Data$ROSC_Time[i] <- Zoll_Data$FixedTime[i+1] - Zoll_Data$FixedTime[i],
-             Zoll_Data$ROSC_Time[i] <- 0)
-    }
-    
-    Zoll_CCF_Total <- sum(Zoll_Data$CCF_Time_In)/((max(Zoll_Data$FixedTime) - 
-                                                     min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
-    
-    Time_Out_CCs <- ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime)) - sum(Zoll_Data$CCF_Time_In)-sum(Zoll_Data$ROSC_Time))/
-      ((max(Zoll_Data$FixedTime) - min(Zoll_Data$FixedTime))-sum(Zoll_Data$ROSC_Time))
-    
-    Total_Number_CCs <- nrow(subset(Zoll_Data, Zoll_Data$Valid == "Valid"))
-    
-    Minute_Time <- max(Zoll_Data$FixedTime)/60
-    
-    CCFp <- round(Zoll_CCF_Total, digits = 2)
-    CCFo <- round(Time_Out_CCs, digits = 2)
-    
-    CCFPlotDF <- data.frame(c("In CC", "Out CC"), c(CCFp, CCFo))
-    colnames(CCFPlotDF) <- c("Var", "Val")
-    
-    
-    #Pie Plot Addition
-    
-    blank_theme <- theme_minimal()+
-      theme(
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        panel.border = element_blank(),
-        panel.grid=element_blank(),
-        axis.ticks = element_blank(),
-        plot.title=element_text(size=14, face="bold")
+    CCFTbl <- Zoll_Data %>% 
+      summarise(Score = c(round(sum(Period == "compressions" | Period == "rosc", na.rm = T)/nrow(.), 4)*100,
+                          round(sum(Period == "pause", na.rm = T)/nrow(.), 4)*100),
+                Labels = c("Compressions", "Pause"),
+                color = c("#55ac5d", "#ad1f1f")
       )
-    
-    CCF_Pie <- ggplot(CCFPlotDF, aes(x = "", y = Val, fill= Var)) +
-      geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) +
-      blank_theme +
-      scale_fill_manual(values = c("In CC" = "#55ac5d", "Out CC" = "#ad1f1f")) +
-      theme(axis.text.x=element_blank(), plot.title = element_text(hjust = 0.5, size = 18)) +
-      labs(title = "CCF For Event") + theme(legend.position="none") +
-      geom_text(aes(label = scales::percent(Val)), 
-                size = 8, position = position_stack(vjust = 0.5))
-    #theme(plot.background = element_rect((fill = "#343434")))
-    
-    CCF_Pie
+
+    hchart(CCFTbl, type = "pie", hcaes(labels = Labels, y = Score, color = color)) %>% 
+      hc_tooltip(pointFormat = "{point.Labels}: <b>{point.Score}%</b>", 
+                 headerFormat = NULL, crosshairs = TRUE, borderWidth = 1, shared=T) %>% 
+      hc_plotOptions(pie=list(dataLabels=list(enabled = F))) %>% 
+      hc_title(text = "CCF Score*") %>% 
+      hc_credits(enabled = TRUE,
+                 text = "*CCF Score is a rough approximation") %>% 
+      hc_add_theme(hc_theme_smpl())
     
   })
   
   #Outputs the average depth and rate
-  output$CCFPiePlot <- renderPlot({
+  output$CCFPiePlot <- renderHighchart({
     validate(
       need(input$datafile != "", ""),
       need(input$ageinput != "", "")
@@ -273,101 +181,82 @@ shinyServer(function(input, output) {
   })
   
   ## Plotly Depth Plot ------------------------------------------------------------
-  DepthPlotly <- reactive({
+  DepthHC <- reactive({
     Zoll_Data <- filedata()
     
     if(input$ageinput <1){
-      targetDh <- geom_hline(yintercept = 4.6, colour = "red", linetype = 4, size = 1)
-      targetDl <- geom_hline(yintercept = 3.6, colour = "blue", linetype = 2, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
-      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 4
       targetDli <- 3.3
     } else if(input$ageinput >= 1 & input$ageinput <8){
-      targetDh <- geom_hline(yintercept = 5.6, colour = "red", linetype = 4, size = 1)
-      targetDl <- geom_hline(yintercept = 4.6, colour = "blue", linetype = 2, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
-      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 5
       targetDli <- 4.4
     } else if(input$ageinput >= 8 & input$ageinput <18){
-      targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
-      targetDl <- geom_hline(yintercept = 6, colour = "red", linetype = 4, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 5, ymax = 6), 
-      #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 6
       targetDli <- 5
     } else{
       print("Inelligible")
     }
     
-    Zoll_Data$color <- ifelse(Zoll_Data$DepthCm < targetDli | Zoll_Data$DepthCm > targetDhi, "#ad1f1f", "#55ac5d")
-    
     Zoll_Data <- Zoll_Data %>% 
+      mutate(color = ifelse(DepthCm < targetDli | DepthCm > targetDhi, "#ad1f1f", "#55ac5d")) %>% 
       filter(DepthCm > 0.4, DepthCm < 10)
     
-    Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
-      theme_bw() +
-      geom_bar(stat = "identity", width = 0.1, color = Zoll_Data$color) +
-      #geom_col(aes(color = color)) +
-      xlab("Time (s)") + ylab("Depth (cm)") +
-      targetDh + targetDl + theme(axis.line = element_line(size = 1, colour = "black")) +
-      theme(axis.line = element_line(arrow = arrow())) + theme(legend.position="none")
-    #theme(plot.background = element_rect((fill = "#343434")))
-    
-    Depth_Plot %>% 
-      ggplotly()
+    hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(DepthCm, digits = 2), color = color)) %>%
+      hc_tooltip(pointFormat = "Depth (cm): <b>{point.RateCPM}</b>", 
+                 crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
+      hc_yAxis_multiples(plotLines = list(list(value = targetDhi, color = "blue", width = 2, dashStyle = "shortdash"),
+                                          list(value = targetDli, color = "red", width = 2, dashStyle = "shortdash"))) %>%
+      hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
+      hc_exporting(enabled = TRUE,
+                   filename = "DepthPlot") %>%
+      hc_yAxis(title = list(text = "Depth (cm)")) %>%
+      hc_xAxis(title = list(text = "Time (s)")) %>% 
+      hc_add_theme(hc_theme_smpl())
     
   })
   
   #Outputs the average depth and rate
-  output$DepthPlotly <- renderPlotly({
+  output$DepthHC <- renderHighchart({
     validate(
       need(input$datafile != "", ""),
       need(input$ageinput != "", "")
     )
     if (input$datafile == 0) return(NULL)
-    DepthPlotly()
+    DepthHC()
   })
   
   ## Plotly Rate Plot--------------------------------------------------------------
-  RatePlotly <- reactive({
+  RateHC <- reactive({
     Zoll_Data <- filedata()
     
-    targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
-    targetRl <- geom_hline(yintercept = 100, colour = "red", linetype = 4, size = 1)
-    targetRb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                              xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
-    
-    Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "#ad1f1f", "#55ac5d")
-    
     Zoll_Data <- Zoll_Data %>% 
+      mutate(color = ifelse(RateCPM < 100 | RateCPM > 120,"#ad1f1f", "#55ac5d")) %>% 
       filter(RateCPM > 50, RateCPM < 180)
     
-    Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
-      theme_bw() +
-      geom_point(stat = "identity", color = Zoll_Data$colorRate, size = 1) +
-      xlab("Time (s)") + ylab("Rate (cpm)") +
-      targetRh + targetRl  + theme(axis.line = element_line(size = 1, colour = "black")) +
-      theme(axis.line = element_line(arrow = arrow()))
-    #theme(plot.background = element_rect((fill = "#343434")))
-    
-    Rate_Plot %>% 
-      ggplotly()
+    hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(RateCPM, digits = 2), color = color)) %>%
+      hc_tooltip(pointFormat = "Rate (cpm): <b>{point.RateCPM}</b>", 
+                 crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
+      hc_yAxis_multiples(plotLines = list(list(value = 120, color = "blue", width = 2, dashStyle = "shortdash"),
+                                          list(value = 100, color = "blue", width = 2, dashStyle = "shortdash"))) %>%
+      hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
+      hc_exporting(enabled = TRUE,
+                   filename = "RatePlot") %>%
+      hc_title(text = "CPR Rate Plot", 
+               align = "left") %>%
+      hc_yAxis(title = list(text = "Rate (cpm)")) %>%
+      hc_xAxis(title = list(text = "Time (s)")) %>% 
+      hc_add_theme(hc_theme_smpl())
     
   })
   
   #Outputs the average depth and rate
-  output$RatePlotly <- renderPlotly({
+  output$RateHC <- renderHighchart({
     validate(
       need(input$datafile != "", ""),
       need(input$ageinput != "", "")
     )
     if (input$datafile == 0) return(NULL)
-    RatePlotly()
+    RateHC()
   })
   
   ## Report Depth Plot ------------------------------------------------------------
@@ -377,24 +266,24 @@ shinyServer(function(input, output) {
     if(input$ageinput <1){
       targetDh <- geom_hline(yintercept = 4.6, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 3.6, colour = "blue", linetype = 2, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 3.3, ymax = 4), 
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$Time), 
+      #                           xmax = max(Zoll_Data$Time), ymin = 3.3, ymax = 4), 
       #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 4
       targetDli <- 3.3
     } else if(input$ageinput >= 1 & input$ageinput <8){
       targetDh <- geom_hline(yintercept = 5.6, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 4.6, colour = "blue", linetype = 2, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 4.4, ymax = 5), 
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$Time), 
+      #                           xmax = max(Zoll_Data$Time), ymin = 4.4, ymax = 5), 
       #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 5
       targetDli <- 4.4
     } else if(input$ageinput >= 8 & input$ageinput <18){
       targetDh <- geom_hline(yintercept = 5, colour = "red", linetype = 4, size = 1)
       targetDl <- geom_hline(yintercept = 6, colour = "red", linetype = 4, size = 1)
-      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-      #                           xmax = max(Zoll_Data$FixedTime), ymin = 5, ymax = 6), 
+      # targetDb <- geom_rect(aes(xmin = min(Zoll_Data$Time), 
+      #                           xmax = max(Zoll_Data$Time), ymin = 5, ymax = 6), 
       #                       fill = "seagreen3", alpha = 0.01)
       targetDhi <- 6
       targetDli <- 5
@@ -407,7 +296,7 @@ shinyServer(function(input, output) {
     Zoll_Data <- Zoll_Data %>% 
       filter(DepthCm > 0.4, DepthCm < 10)
     
-    Depth_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = DepthCm)) +
+    Depth_Plot <- ggplot(Zoll_Data, aes(x = Time, y = DepthCm)) +
       theme_bw() +
       geom_bar(stat = "identity", width = 0.1, color = Zoll_Data$color) +
       #geom_col(aes(color = color)) +
@@ -416,7 +305,6 @@ shinyServer(function(input, output) {
       theme(axis.line = element_line(arrow = arrow())) + theme(legend.position="none")
     
     Depth_Plot
-    
   })
   
   #Outputs the average depth and rate
@@ -435,15 +323,15 @@ shinyServer(function(input, output) {
     
     targetRh <- geom_hline(yintercept = 120, colour = "red", linetype = 4, size = 1)
     targetRl <- geom_hline(yintercept = 100, colour = "red", linetype = 4, size = 1)
-    targetRb <- geom_rect(aes(xmin = min(Zoll_Data$FixedTime), 
-                              xmax = max(Zoll_Data$FixedTime), ymin = 100, ymax = 120))
+    targetRb <- geom_rect(aes(xmin = min(Zoll_Data$Time), 
+                              xmax = max(Zoll_Data$Time), ymin = 100, ymax = 120))
     
     Zoll_Data$colorRate <- ifelse(Zoll_Data$RateCPM < 100 | Zoll_Data$RateCPM > 120, "#ad1f1f", "#55ac5d")
     
     Zoll_Data <- Zoll_Data %>% 
       filter(RateCPM > 50, RateCPM < 180)
     
-    Rate_Plot <- ggplot(Zoll_Data, aes(x = FixedTime, y = RateCPM)) +
+    Rate_Plot <- ggplot(Zoll_Data, aes(x = Time, y = RateCPM)) +
       theme_bw() +
       geom_point(stat = "identity", color = Zoll_Data$colorRate, size = 1) +
       xlab("Time (s)") + ylab("Rate (cpm)") +
