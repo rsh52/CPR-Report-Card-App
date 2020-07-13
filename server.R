@@ -6,7 +6,7 @@
 # downloadHandler feeds the information into. 
 
 shinyServer(function(input, output) {
-
+  
   # File Data --------------------------------------------------------------------
   # This function is responsible for loading in the selected file
   filedata <- reactive({
@@ -18,7 +18,7 @@ shinyServer(function(input, output) {
     }
     filedata <- read.csv(infile$datapath, skipNul = TRUE)
     colnames(filedata) <- c("Second", "Milisecond", "DepthIn", "RateCPM", "RVMMS",
-                              "Valid")
+                            "Valid")
     
     # Convert second and milisecond into one Time Column
     # Drop Inches and extra time columns
@@ -48,42 +48,11 @@ shinyServer(function(input, output) {
     head(filedata())
   })
   
-  # Avg Depth & Rate Tbl---------------------------------------------------------- 
-  # The following lines read in the CSV file, rename the columns, adjusts the units,
-  # and create a data frame with average depth and rate for the event.
-  AvgDepthRate <- reactive({
+  # Average Tbl ----------------------------------------------------
+  AvgTbl <- reactive({
     Zoll_Data <- filedata()
     
-    ADRframe <- Zoll_Data %>% 
-      mutate(DepthAvg = round(mean(DepthCm, na.rm = T), digits = 1),
-             RateAvg = round(mean(RateCPM, na.rm = T), digits = 1)) %>% 
-      select(DepthAvg, RateAvg) %>% 
-      distinct()
-    
-    FillVars <- c("Depth (cm)", "Rate (cpm)")
-    ADRframe <- data.frame(FillVars, c(ADRframe$DepthAvg, ADRframe$RateAvg))
-    colnames(ADRframe) <- c("Event Average Depth & Rate","")
-    
-    ADRframe
-  })
-  
-  # Outputs the average depth and rate
-  # Note that validate and need commands control initial blank error messages
-  output$AvgDepthRate <- renderTable({
-    validate(
-      need(input$datafile != "", "Please Upload a Dataset"),
-      need(input$ageinput != "", "Please Select an Age")
-    )
-    if (input$datafile == 0) return(NULL)
-    AvgDepthRate()
-  })
-  
-  # Percent In Target Ranges---------------------------------------------------------- 
-  # 
-  PercDepthRate <- reactive({
-    Zoll_Data <- filedata()
-    
-    
+    # Define Age criteria based on user input
     if(input$ageinput <1){
       targetDhi <- 4.6
       targetDli <- 3.6
@@ -97,56 +66,53 @@ shinyServer(function(input, output) {
       print("Inelligible")
     }
     
+    # Contruct averages to feed final table
+    Avgframe <- Zoll_Data %>% 
+      mutate(DepthAvg = round(mean(DepthCm, na.rm = T), digits = 1),
+             RateAvg = round(mean(RateCPM, na.rm = T), digits = 1),
+             RVAvg = round(mean(RVMMS, na.rm = T), digits = 1)) %>% 
+      select(DepthAvg, RateAvg, RVAvg) %>% 
+      distinct()
+
+    # Calculate percentages in range of criteria
     Zoll_CC_Total <- nrow(Zoll_Data)
     Depth_CC_In <- length(subset(Zoll_Data$DepthCm, Zoll_Data$DepthCm >= targetDli & Zoll_Data$DepthCm <= targetDhi))
     Depth_Perc_In <- 100*round(Depth_CC_In / Zoll_CC_Total,2)
     Rate_CC_In <- length(subset(Zoll_Data$RateCPM, Zoll_Data$RateCPM >= 100 & Zoll_Data$RateCPM <= 120))
     Rate_Perc_In <- 100*round(Rate_CC_In / Zoll_CC_Total,2)
+    RV_CC_In <- length(subset(Zoll_Data$RVMMS, Zoll_Data$RVMMS >= 400))
+    RV_Perc_In <- 100*round(RV_CC_In/Zoll_CC_Total, 2)
     
-    PercInframe <- data.frame(
-      c("Compressions in Target Depth: ", "Compressions in Target Rate: "),
-      c(paste0(Depth_Perc_In, "%"), paste0(Rate_Perc_In,"%"))
-    )
-    colnames(PercInframe) <- c("", "Percentage")
+    ## CCF Calculations
+    CCFTbl <- Zoll_Data %>% 
+      summarise(Compressions = paste0(round(sum(Period == "compressions" | Period == "rosc", na.rm = T)/nrow(.), 2)*100, "%"),
+                Pause = paste0(round(sum(Period == "pause", na.rm = T)/nrow(.), 2)*100, "%"))
     
-    PercInframe
+    CCFTbl <- CCFTbl %>% 
+      mutate(" " = "CCF Score: ") %>% 
+      select(" ", Compressions, Pause)
+    
+    # Construct final dataframe to feed to html output
+    Avgframe <- data.frame("Metric" = c("Avg. Depth (cm)", "% in Target Depth", "% in Target Rate", "Avg. Rate (cpm)", "Avg. RV (mm/s)", "% in Target RV", "CCF Score:"),
+               "Value" = unlist(c(Avgframe[1], paste0(Depth_Perc_In,"%"), Avgframe[2], paste0(Rate_Perc_In,"%"), Avgframe[3], paste0(RV_Perc_In,"%"), CCFTbl[1,2])))
+  
+    Avgframe %>% 
+      kable() %>% 
+      kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 18)
+
   })
   
-  #Outputs the average depth and rate
+  # Outputs the average depth and rate
   # Note that validate and need commands control initial blank error messages
-  output$PercDepthRate <- renderTable({
+  output$AvgTbl <- renderText({
     validate(
       need(input$datafile != "", "Please Upload a Dataset"),
       need(input$ageinput != "", "Please Select an Age")
     )
     if (input$datafile == 0) return(NULL)
-    PercDepthRate()
+    AvgTbl()
   })
-  
-  # CCF Tbl ----------------------------------------------------------------------
-  CCF <- reactive({
-    Zoll_Data <- filedata()
-    
-    CCFTbl <- Zoll_Data %>% 
-      summarise(Compressions = paste0(round(sum(Period == "compressions" | Period == "rosc", na.rm = T)/nrow(.), 4)*100, "%"),
-                Pause = paste0(round(sum(Period == "pause", na.rm = T)/nrow(.), 4)*100, "%"))
-    
-    CCFTbl %>% 
-      mutate(" " = "CCF Score: ") %>% 
-      select(" ", Compressions, Pause)
-    
-  })
-  
-  #Outputs the average depth and rate
-  output$CCF <- renderTable({
-    validate(
-      need(input$datafile != "", ""),
-      need(input$ageinput != "", "")
-    )
-    if (input$datafile == 0) return(NULL)
-    CCF()
-  })
-  
+
   ## CCF Pie Plot ----------------------------------------------------------------
   CCFPiePlot <- reactive({
     
@@ -158,7 +124,7 @@ shinyServer(function(input, output) {
                 Labels = c("Compressions", "Pause"),
                 color = c("#55ac5d", "#ad1f1f")
       )
-
+    
     hchart(CCFTbl, type = "pie", hcaes(labels = Labels, y = Score, color = color)) %>% 
       hc_tooltip(pointFormat = "{point.Labels}: <b>{point.Score}%</b>", 
                  headerFormat = NULL, crosshairs = TRUE, borderWidth = 1, shared=T) %>% 
@@ -180,7 +146,7 @@ shinyServer(function(input, output) {
     CCFPiePlot()
   })
   
-  ## Plotly Depth Plot ------------------------------------------------------------
+  ## HC Depth Plot ------------------------------------------------------------
   DepthHC <- reactive({
     Zoll_Data <- filedata()
     
@@ -201,17 +167,38 @@ shinyServer(function(input, output) {
       mutate(color = ifelse(DepthCm < targetDli | DepthCm > targetDhi, "#ad1f1f", "#55ac5d")) %>% 
       filter(DepthCm > 0.4, DepthCm < 10)
     
-    hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(DepthCm, digits = 2), color = color)) %>%
-      hc_tooltip(pointFormat = "Depth (cm): <b>{point.RateCPM}</b>", 
-                 crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
-      hc_yAxis_multiples(plotLines = list(list(value = targetDhi, color = "blue", width = 2, dashStyle = "shortdash"),
-                                          list(value = targetDli, color = "red", width = 2, dashStyle = "shortdash"))) %>%
-      hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
-      hc_exporting(enabled = TRUE,
-                   filename = "DepthPlot") %>%
-      hc_yAxis(title = list(text = "Depth (cm)")) %>%
-      hc_xAxis(title = list(text = "Time (s)")) %>% 
-      hc_add_theme(hc_theme_smpl())
+    # Color coding for age-specific target depth guidelines using ifelse
+    ifelse(targetDhi == 6,
+           depth.hc <- hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(DepthCm, digits = 2), color = color)) %>%
+             hc_tooltip(pointFormat = "Depth (cm): <b>{point.RateCPM}</b>", 
+                        crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
+             hc_yAxis_multiples(plotLines = list(list(value = targetDli, color = "red", width = 2, dashStyle = "shortdash"),
+                                                 list(value = targetDhi, color = "red", width = 2, dashStyle = "shortdash"))) %>%
+             hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
+             hc_exporting(enabled = TRUE,
+                          filename = "DepthPlot") %>%
+             hc_yAxis(title = list(text = "Depth (cm)")) %>%
+             hc_xAxis(title = list(text = "Time (s)")) %>% 
+             hc_title(text = "CPR Depth Plot", 
+                      align = "left") %>%
+             hc_add_theme(hc_theme_smpl()),
+           
+           depth.hc <- hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(DepthCm, digits = 2), color = color)) %>%
+             hc_tooltip(pointFormat = "Depth (cm): <b>{point.RateCPM}</b>", 
+                        crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
+             hc_yAxis_multiples(plotLines = list(list(value = targetDli, color = "blue", width = 2, dashStyle = "shortdash"),
+                                                 list(value = targetDhi, color = "red", width = 2, dashStyle = "shortdash"))) %>%
+             hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
+             hc_exporting(enabled = TRUE,
+                          filename = "DepthPlot") %>%
+             hc_yAxis(title = list(text = "Depth (cm)")) %>%
+             hc_xAxis(title = list(text = "Time (s)")) %>% 
+             hc_title(text = "CPR Depth Plot", 
+                      align = "left") %>%
+             hc_add_theme(hc_theme_smpl())
+    )
+    
+    depth.hc
     
   })
   
@@ -225,7 +212,7 @@ shinyServer(function(input, output) {
     DepthHC()
   })
   
-  ## Plotly Rate Plot--------------------------------------------------------------
+  ## HC Rate Plot--------------------------------------------------------------
   RateHC <- reactive({
     Zoll_Data <- filedata()
     
@@ -352,33 +339,102 @@ shinyServer(function(input, output) {
     RatePlot()
   })
   
+  ## Epoch Report Table--------------------------------------------------------------
+  EpochEval <- reactive({
+    Zoll_Data <- filedata()
+    
+    epoch.df <- Zoll_Data %>%
+      mutate(
+        CompTimeZero = Time - dplyr::first(Time), # Set first to 0 and subtract from all subsequent
+        CompTimeRound = round(CompTimeZero, 0) # Round to make interpolation easier
+      ) %>% 
+      group_by(CompTimeRound) %>% 
+      summarise(
+        RateCPM = mean(RateCPM),
+        DepthCm = mean(DepthCm),
+        RVMMS = mean(RVMMS)
+      ) %>% 
+      # Linearly interpolate and fill in missing seconds, leaving NA for compression metrics
+      complete(CompTimeRound = full_seq(0:max(CompTimeRound), period = 1), fill = list(
+        RateCPM = NA, DepthCm = NA,
+        RVMMS = NA)) %>% 
+      # Apply a rolling average by a window of observations, excluding NA values
+      summarise(
+        epoch.rate = round(rollapply(RateCPM, width = input$epochwin, FUN = input$epochfx, na.rm = T, fill = NA, by = input$epochwin),1),
+        epoch.depth = round(rollapply(DepthCm, width = input$epochwin, FUN = input$epochfx, na.rm = T, fill = NA, by = input$epochwin),1),
+        epoch.RV = round(rollapply(RVMMS, width = input$epochwin, FUN = input$epochfx, na.rm = T, fill = NA, by = input$epochwin),1)
+        # Uncomment below for testing
+        # epoch.rate = round(rollapply(RateCPM, width = 30, FUN = mean, na.rm = T, fill = NA, by = 30), 1),
+        # epoch.depth = round(rollapply(DepthCm, width = 30, FUN = mean, na.rm = T, fill = NA, by = 30), 1),
+        # epoch.RV = round(rollapply(RVMMS, width = 30, FUN = mean, na.rm = T, fill = NA, by = 30),1)
+      ) %>% 
+      # Filter for distinct observations
+      distinct() %>% 
+      # Remove NA epochs
+      filter(!is.na(epoch.rate) & !is.nan(epoch.rate)) %>% 
+      # Assign Epoch Number per event
+      mutate("Epoch No." = row_number())
+      
+    epoch.df <- epoch.df[c(4,2,1,3)]
+      
+    colnames(epoch.df) <- c("Epoch No.", "Depth (cm)", "Rate (cpm)", "Release Velocity(mm/s)")
+    
+    epoch.df %>% 
+      mutate(
+        `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "white", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "green", "red")),
+        `Depth (cm)` = cell_spec(`Depth (cm)`, color = "white", background = ifelse(input$ageinput <1, 
+                                                                                    ifelse(`Depth (cm)` >= 3.3 & `Depth (cm)` <= 4, "green", "red"),
+                                                                                    ifelse(input$ageinput >= 1 & input$ageinput <8, 
+                                                                                           ifelse(`Depth (cm)` >= 4.4 & `Depth (cm)` <=5, "green", "red"),
+                                                                                           ifelse(`Depth (cm)` >= 5 & `Depth (cm)` <= 6, "green", "red")))),
+        `Release Velocity(mm/s)` = cell_spec(`Release Velocity(mm/s)`, color = "white", background = ifelse(`Release Velocity(mm/s)` > 400, "green", "red"))
+      ) %>% 
+      # Add in kableExtra HTML features
+      kable(escape = F) %>% 
+      kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% 
+      scroll_box(width = "100%", height = "400px")
+    
+  })
+  
+  #Outputs the average depth and rate
+  output$EpochEval <- renderText({
+    validate(
+      need(input$datafile != "", ""),
+      need(input$ageinput != "", "")
+    )
+    if (input$datafile == 0) return(NULL)
+    EpochEval()
+  })
+  
+  
+  
   #* Download Handler------------------------------------------------------------
   
-  output$report <- 
-    downloadHandler(
-      "results_from_shiny.pdf",
-      content = 
-        function(file)
-        {
-          rmarkdown::render(
-            input = "report.Rmd",
-            output_file = "report.pdf",
-            params = list(DepthPlot = DepthPlot(),
-                          RatePlot = RatePlot(),
-                          CCFTbl = CCF(),
-                          CCFPie = CCFPiePlot(),
-                          PercTbl = PercDepthRate(),
-                          AvgDepthRate = AvgDepthRate()),
-            envir = new.env(parent = globalenv())
-          ) 
-          readBin(con = "report.pdf", 
-                  what = "raw",
-                  n = file.info("report.pdf")[, "size"]) %>%
-            writeBin(con = file)
-        }
-    )
+  # output$report <- 
+  #   downloadHandler(
+  #     "results_from_shiny.pdf",
+  #     content = 
+  #       function(file)
+  #       {
+  #         rmarkdown::render(
+  #           input = "report.Rmd",
+  #           output_file = "report.pdf",
+  #           params = list(DepthPlot = DepthPlot(),
+  #                         RatePlot = RatePlot(),
+  #                         CCFTbl = CCF(),
+  #                         CCFPie = CCFPiePlot(),
+  #                         PercTbl = PercDepthRate(),
+  #                         AvgDepthRate = AvgDepthRate()),
+  #           envir = new.env(parent = globalenv())
+  #         ) 
+  #         readBin(con = "report.pdf", 
+  #                 what = "raw",
+  #                 n = file.info("report.pdf")[, "size"]) %>%
+  #           writeBin(con = file)
+  #       }
+  #   )
   
-  
+  # Download SOP for formatting proper Upload file
   output$downloadSOP <- downloadHandler(
     filename <- function() {
       paste("SOP_007A_CPR_Report_Card_App_Documentation", "pdf", sep=".")
@@ -388,6 +444,18 @@ shinyServer(function(input, output) {
       file.copy("SOP_007A_CPR_Report_Card_App_Documentation.pdf", file)
     },
     contentType = "pdf"
+  )
+  
+  # Download sample pre-formatted upload file
+  output$downloadCCs <- downloadHandler(
+    filename <- function() {
+      paste("Example_Pediatric_Compressions", "csv", sep=".")
+    },
+    
+    content <- function(file) {
+      file.copy("Example_Pediatric_Compressions.csv", file)
+    },
+    contentType = "csv"
   )
   
   
