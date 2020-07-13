@@ -93,7 +93,7 @@ shinyServer(function(input, output) {
       select(" ", Compressions, Pause)
     
     # Construct final dataframe to feed to html output
-    Avgframe <- data.frame("Metric" = c("Avg. Depth (cm)", "% in Target Depth", "% in Target Rate", "Avg. Rate (cpm)", "Avg. RV (mm/s)", "% in Target RV", "CCF Score:"),
+    Avgframe <- data.frame("Metric" = c("Avg. Depth (cm)", "% in Target Depth", "Avg. Rate (cpm)", "% in Target Rate", "Avg. RV (mm/s)", "% in Target RV", "CCF Score:"),
                "Value" = unlist(c(Avgframe[1], paste0(Depth_Perc_In,"%"), Avgframe[2], paste0(Rate_Perc_In,"%"), Avgframe[3], paste0(RV_Perc_In,"%"), CCFTbl[1,2])))
   
     Avgframe %>% 
