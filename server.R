@@ -54,11 +54,11 @@ shinyServer(function(input, output) {
     
     # Define Age criteria based on user input
     if(input$ageinput <1){
-      targetDhi <- 4.6
-      targetDli <- 3.6
+      targetDhi <- 4
+      targetDli <- 3.4
     } else if(input$ageinput >= 1 & input$ageinput <8){
-      targetDhi <- 5.6
-      targetDli <- 4.6
+      targetDhi <- 5
+      targetDli <- 4.4
     } else if(input$ageinput >= 8 & input$ageinput <18){
       targetDhi <- 6
       targetDli <- 5
@@ -76,7 +76,12 @@ shinyServer(function(input, output) {
 
     # Calculate percentages in range of criteria
     Zoll_CC_Total <- nrow(Zoll_Data)
-    Depth_CC_In <- length(subset(Zoll_Data$DepthCm, Zoll_Data$DepthCm >= targetDli & Zoll_Data$DepthCm <= targetDhi))
+    
+    # Upper and lower limits only applied to 8 - 18 year olds, otherwise just lower limit applies
+    ifelse(input$ageinput >= 8,
+           Depth_CC_In <- length(subset(Zoll_Data$DepthCm, Zoll_Data$DepthCm >= targetDli & Zoll_Data$DepthCm <= targetDhi)),
+           Depth_CC_In <- length(subset(Zoll_Data$DepthCm, Zoll_Data$DepthCm >= targetDli)))
+    
     Depth_Perc_In <- 100*round(Depth_CC_In / Zoll_CC_Total,2)
     Rate_CC_In <- length(subset(Zoll_Data$RateCPM, Zoll_Data$RateCPM >= 100 & Zoll_Data$RateCPM <= 120))
     Rate_Perc_In <- 100*round(Rate_CC_In / Zoll_CC_Total,2)
@@ -98,7 +103,8 @@ shinyServer(function(input, output) {
   
     Avgframe %>% 
       kable() %>% 
-      kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 18)
+      kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 18) %>% 
+      column_spec(1:2, bold = T)
 
   })
   
@@ -152,7 +158,7 @@ shinyServer(function(input, output) {
     
     if(input$ageinput <1){
       targetDhi <- 4
-      targetDli <- 3.3
+      targetDli <- 3.4
     } else if(input$ageinput >= 1 & input$ageinput <8){
       targetDhi <- 5
       targetDli <- 4.4
@@ -162,10 +168,16 @@ shinyServer(function(input, output) {
     } else{
       print("Inelligible")
     }
-    
-    Zoll_Data <- Zoll_Data %>% 
-      mutate(color = ifelse(DepthCm < targetDli | DepthCm > targetDhi, "#ad1f1f", "#55ac5d")) %>% 
-      filter(DepthCm > 0.4, DepthCm < 10)
+
+    # Current if/else based on only lower limit for <8 year olds
+    ifelse(input$ageinput >= 8,
+            Zoll_Data <- Zoll_Data %>% 
+              mutate(color = ifelse(DepthCm < targetDli | DepthCm > targetDhi, "#ad1f1f", "#55ac5d")) %>% 
+              filter(DepthCm > 0.4, DepthCm < 10),
+            Zoll_Data <- Zoll_Data %>% 
+              mutate(color = ifelse(DepthCm < targetDli, "#ad1f1f", "#55ac5d")) %>% 
+              filter(DepthCm > 0.4, DepthCm < 10))
+
     
     # Color coding for age-specific target depth guidelines using ifelse
     ifelse(targetDhi == 6,
@@ -186,8 +198,7 @@ shinyServer(function(input, output) {
            depth.hc <- hchart(Zoll_Data, type = "column", hcaes(x = Time, y = round(DepthCm, digits = 2), color = color)) %>%
              hc_tooltip(pointFormat = "Depth (cm): <b>{point.RateCPM}</b>", 
                         crosshairs = TRUE, shared = TRUE, borderWidth = 1, shared=T) %>%
-             hc_yAxis_multiples(plotLines = list(list(value = targetDli, color = "blue", width = 2, dashStyle = "shortdash"),
-                                                 list(value = targetDhi, color = "red", width = 2, dashStyle = "shortdash"))) %>%
+             hc_yAxis_multiples(plotLines = list(list(value = targetDli, color = "red", width = 2, dashStyle = "shortdash"))) %>%
              hc_chart(zoomType = "xy", dataSorting.enabled = TRUE) %>%
              hc_exporting(enabled = TRUE,
                           filename = "DepthPlot") %>%
@@ -377,22 +388,63 @@ shinyServer(function(input, output) {
       
     epoch.df <- epoch.df[c(4,2,1,3)]
       
-    colnames(epoch.df) <- c("Epoch No.", "Depth (cm)", "Rate (cpm)", "Release Velocity(mm/s)")
+    colnames(epoch.df) <- c("Epoch No.", "Depth (cm)", "Rate (cpm)", "Release Velocity (mm/s)")
     
-    epoch.df %>% 
-      mutate(
-        `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "white", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "green", "red")),
-        `Depth (cm)` = cell_spec(`Depth (cm)`, color = "white", background = ifelse(input$ageinput <1, 
-                                                                                    ifelse(`Depth (cm)` >= 3.3 & `Depth (cm)` <= 4, "green", "red"),
-                                                                                    ifelse(input$ageinput >= 1 & input$ageinput <8, 
-                                                                                           ifelse(`Depth (cm)` >= 4.4 & `Depth (cm)` <=5, "green", "red"),
-                                                                                           ifelse(`Depth (cm)` >= 5 & `Depth (cm)` <= 6, "green", "red")))),
-        `Release Velocity(mm/s)` = cell_spec(`Release Velocity(mm/s)`, color = "white", background = ifelse(`Release Velocity(mm/s)` > 400, "green", "red"))
-      ) %>% 
-      # Add in kableExtra HTML features
-      kable(escape = F) %>% 
-      kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% 
-      scroll_box(width = "100%", height = "400px")
+    # epoch.df %>% 
+    #   mutate(
+    #     `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "black", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "#89FF77", "#FF7777")),
+    #     `Depth (cm)` = cell_spec(`Depth (cm)`, color = "black", background = ifelse(input$ageinput <1, 
+    #                                                                                 ifelse(`Depth (cm)` >= 3.4, "#89FF77", "#FF7777"),
+    #                                                                                 ifelse(input$ageinput >= 1 & input$ageinput <8, 
+    #                                                                                        ifelse(`Depth (cm)` >= 4.4, "#89FF77", "#FF7777"),
+    #                                                                                        ifelse(`Depth (cm)` >= 5 & `Depth (cm)` <= 6, "#89FF77", "#FF7777")))),
+    #     `Release Velocity (mm/s)` = cell_spec(`Release Velocity (mm/s)`, color = "black", background = ifelse(`Release Velocity (mm/s)` > 400, "#89FF77", "#FF7777"))
+    #   ) %>% 
+    #   # Add in kableExtra HTML features
+    #   kable(escape = F) %>% 
+    #   kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 16) %>% 
+    #   column_spec(2:4, bold = T) %>% 
+    #   scroll_box(width = "100%", height = "350px")
+    
+    ifelse(input$ageinput <1,
+           epoch.tbl <- epoch.df %>% 
+             mutate(
+               `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "black", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "#89FF77", "#FF7777")),
+               `Depth (cm)` = cell_spec(`Depth (cm)`, color = "black", background = ifelse(`Depth (cm)` >= 3.4, "#89FF77", "#FF7777")),
+               `Release Velocity (mm/s)` = cell_spec(`Release Velocity (mm/s)`, color = "black", background = ifelse(`Release Velocity (mm/s)` > 400, "#89FF77", "#FF7777"))
+             ) %>% 
+             # Add in kableExtra HTML features
+             kable(escape = F) %>% 
+             kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 16) %>% 
+             column_spec(2:4, bold = T) %>% 
+             scroll_box(width = "100%", height = "350px"),
+           ifelse(input$ageinput >= 1 & input$ageinput < 8,
+                  epoch.tbl <- epoch.df %>% 
+                    mutate(
+                      `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "black", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "#89FF77", "#FF7777")),
+                      `Depth (cm)` = cell_spec(`Depth (cm)`, color = "black", background = ifelse(`Depth (cm)` >= 4.4, "#89FF77", "#FF7777")),
+                      `Release Velocity (mm/s)` = cell_spec(`Release Velocity (mm/s)`, color = "black", background = ifelse(`Release Velocity (mm/s)` > 400, "#89FF77", "#FF7777"))
+                    ) %>% 
+                    # Add in kableExtra HTML features
+                    kable(escape = F) %>% 
+                    kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 16) %>% 
+                    column_spec(2:4, bold = T) %>% 
+                    scroll_box(width = "100%", height = "350px"),
+                  epoch.tbl <- epoch.df %>% 
+                    mutate(
+                      `Rate (cpm)` = cell_spec(`Rate (cpm)`, color = "black", background = ifelse(`Rate (cpm)` > 100 & `Rate (cpm)` <120, "#89FF77", "#FF7777")),
+                      `Depth (cm)` = cell_spec(`Depth (cm)`, color = "black", background = ifelse(`Depth (cm)` >= 5 & `Depth (cm)` <= 6, "#89FF77", "#FF7777")),
+                      `Release Velocity (mm/s)` = cell_spec(`Release Velocity (mm/s)`, color = "black", background = ifelse(`Release Velocity (mm/s)` > 400, "#89FF77", "#FF7777"))
+                    ) %>% 
+                    # Add in kableExtra HTML features
+                    kable(escape = F) %>% 
+                    kable_styling(bootstrap_options = c("striped", "hover"), full_width = F, font_size = 16) %>% 
+                    column_spec(2:4, bold = T) %>% 
+                    scroll_box(width = "100%", height = "350px")
+                  )
+    )
+    
+    epoch.tbl
     
   })
   

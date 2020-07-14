@@ -5,9 +5,9 @@ account: pediresq
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 974712
-bundleId: 3387518
+bundleId: 3387586
 url: https://chopccm.shinyapps.io/CPR-Report-Card-App/
-when: 1594669256.92154
+when: 1594670036.48189
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .gitattributes|downloadReport|README.md|report.Rmd|report.tex|Scrapyard/HTML_Output.Rmd|Scrapyard/PDF_Output.Rmd|Zoll_File
+ignoredFiles: .gitattributes|downloadReport|README.md|report.Rmd|report.tex|Scrapyard/HTML_Output.Rmd|Scrapyard/PDF_Output.Rmd
