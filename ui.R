@@ -7,6 +7,7 @@ library(zoo)
 library(kableExtra)
 
 ui <- fluidPage(
+  tags$head(includeHTML(("google-analytics.html"))),
   theme = shinytheme("united"),
   # shinythemes::themeSelector(),
   headerPanel("CPR Report Card Application"),
