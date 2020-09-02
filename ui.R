@@ -6,7 +6,10 @@ library(tidyverse)
 library(zoo)
 library(kableExtra)
 
+source("cicerone_guide.R")
+
 ui <- fluidPage(
+  use_cicerone(),
   tags$head(includeHTML(("google-analytics.html"))),
   theme = shinytheme("united"),
   # shinythemes::themeSelector(),
@@ -32,6 +35,7 @@ ui <- fluidPage(
   
   mainPanel(
     tabsetPanel(
+      id = "main",
       type = "tabs",
       tabPanel(title = "Data",
                fluidRow(
@@ -94,7 +98,7 @@ ui <- fluidPage(
         strong("To calculate epoch averages, all time stamps are shifted up to zero and rounded to the nearest whole second. Averages are then taken (using means) of compressions in between seconds and interpolations are inserted with blank measurements for seconds that are missing. A rolling window is then applied aggregating the CPR measurements as the user dictates above."),
         br(),
         strong("Epochs are defined in seconds of time.")
-        )
+      )
       
     )
     

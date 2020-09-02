@@ -6,6 +6,8 @@
 # downloadHandler feeds the information into. 
 
 shinyServer(function(input, output) {
+  # initialise then start the guide
+  guide$init()$start()
   
   # File Data --------------------------------------------------------------------
   # This function is responsible for loading in the selected file
